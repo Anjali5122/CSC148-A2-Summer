@@ -1,0 +1,38 @@
+class TwoDTree(Tree):
+    """ A TwoDTree class which is a subclass of class Tree.
+
+    == Private Attributes ==
+    _name: The name of the player or none if its an empty tree
+    _point: the x/y coordinates of the player, also the dividing point of the
+    rectangle
+    _nw: the x/y coordinates of the north west corner of the rectangle described
+    by this tree
+    _se: the x/y coordinates of the south east corner of the rectangle described
+     by this tree
+    _lt: a 2D-tree that represents the either the north-most or west-most
+    section of the rectangle
+    _gt: a 2D-tree that represents the either the south-most or east-most
+    section of the rectangle
+    _split_type: a string indicating whether this rectangle should be split
+    vertically or horizontally
+
+    == Representation Invariants ==
+    - all nodes must have _name and _point attributes unless they have no 
+    descendants and no parents.
+    - a node with no parents must have a _split_type == 'x'
+    - a non-root node should have a value of None for both its _nw and _se 
+    attributes.
+    - a root node should not have a value of None for its _nw and _se attributes
+    - a node with _split_type == 'x' must not have a parent or any children 
+    with _split_type == 'x'
+    - a node with _split_type == 'y' must not have a parent or any children 
+    with _split_type == 'y'
+    - all descendants of a given node p must have a _point that falls in the 
+    rectangle described by _nw and _se
+    - for a given node p, if _split_type == 'x' then:
+        - all descendants d of p must be in p._lt if d._point[0] <= p._point[0] 
+    and be in p._gt otherwise
+    - for a given node p, if _split_type == 'y' then:
+      - all descendants d of p must be in p._lt if d._point[1] <= p._point[1] 
+    and be in p._gt otherwise
+    """
