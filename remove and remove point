@@ -1,0 +1,220 @@
+    def remove(self, name: str) -> None:
+        """ Remove information about a player named <name> from this tree.
+
+        Runtime: O(n)
+        """
+        tree = self._find_tree_byname(name)
+        if tree is not None:
+            self.remove_point(tree._point)
+
+    def _get_xpoints_dict(self, stype: str, size: str) -> Dict:
+        if size == 'min':
+            d = {self: self._point[0]}
+            if self._lt is not None and self._split_type == stype:
+                d.update(self._lt._get_xpoints_dict(stype, size))
+            elif self._split_type != stype:
+                if self._lt is not None:
+                    d.update(self._lt._get_xpoints_dict(stype, size))
+                if self._gt is not None:
+                    d.update(self._gt._get_xpoints_dict(stype, size))
+            return d
+        elif size == 'max':
+            d = {self: self._point[0]}
+            if self._gt is not None and self._split_type == stype:
+                d.update(self._gt._get_xpoints_dict(stype, size))
+            elif self._split_type != stype:
+                if self._lt is not None:
+                    d.update(self._lt._get_xpoints_dict(stype, size))
+                if self._gt is not None:
+                    d.update(self._gt._get_xpoints_dict(stype, size))
+            return d
+
+    def _get_ypoint_dict(self, stype: str, size: str) -> Dict:
+        if size == 'min':
+            d = {self: self._point[1]}
+            if self._lt is not None and self._split_type == stype:
+                d.update(self._lt._get_xpoints_dict(stype, size))
+            elif self._split_type != stype:
+                if self._lt is not None:
+                    d.update(self._lt._get_xpoints_dict(stype, size))
+                if self._gt is not None:
+                    d.update(self._gt._get_xpoints_dict(stype, size))
+            return d
+        elif size == 'max':
+            d = {self: self._point[1]}
+            if self._gt is not None and self._split_type == stype:
+                d.update(self._gt._get_xpoints_dict(stype, size))
+            elif self._split_type != stype:
+                if self._lt is not None:
+                    d.update(self._lt._get_xpoints_dict(stype, size))
+                if self._gt is not None:
+                    d.update(self._gt._get_xpoints_dict(stype, size))
+            return d
+
+    # def _get_promoting_tree(self, size):
+    #     if self._gt is not None:
+    #         if self._split_type == 'x':
+    #             d = self._gt._get_xpoints_dict('x', size)
+    #             if size == 'max':
+    #                 return max(d, key=d.get)
+    #             elif size == 'min':
+    #                 return min(d, key=d.get)
+    #         elif self._split_type == 'y':
+    #             d = self._gt._get_ypoint_dict('y', size)
+    #             if size == 'max':
+    #                 return max(d, key=d.get)
+    #             elif size == 'min':
+    #                 return min(d, key=d.get)
+    #     elif self._lt is not None:
+    #         if self._split_type == 'x':
+    #             d = self._lt._get_xpoints_dict('x', size)
+    #             if size == 'max':
+    #                 return max(d, key=d.get)
+    #             elif size == 'min':
+    #                 return min(d, key=d.get)
+    #         elif self._split_type == 'y':
+    #             d = self._lt._get_ypoint_dict('y', size)
+    #             if size == 'max':
+    #                 return max(d, key=d.get)
+    #             elif size == 'min':
+    #                 return min(d, key=d.get)
+
+    def _get_promoting_tree(self, size: str):
+        if self._lt is not None:
+            if self._split_type == 'x':
+                d = self._lt._get_xpoints_dict('x', size)
+            else:
+                d = self._lt._get_ypoint_dict('y', size)
+            if size == 'max':
+                return max(d, key=d.get)
+            elif size == 'min':
+                return min(d, key=d.get)
+        elif self._gt is not None:
+            if self._split_type == 'x':
+                d = self._gt._get_xpoints_dict('x', size)
+            else:
+                d = self._gt._get_ypoint_dict('y', size)
+            if size == 'max':
+                return max(d, key=d.get)
+            elif size == 'min':
+                return min(d, key=d.get)
+
+    # def _get_promote(self, size: str) -> TwoDTree:
+    #     if self._split_type == 'x':
+    #         d = self._get_xpoints_dict('x', size)
+    #     else:
+    #         d = self._get_ypoint_dict('y', size)
+    #     if size == 'max':
+    #         return max(d, key=d.get)
+    #     elif size == 'min':
+    #         return min(d, key=d.get)
+
+    def _find_tree_byname(self, name: str) -> Optional[TwoDTree]:
+        if self.is_empty():
+            return None
+        if self.is_leaf() and self._name == name:
+            return self
+        else:
+            if self._name == name:
+                return self
+            if self._lt is not None:
+                tree = self._lt._find_tree_byname(name)
+                if tree:
+                    return tree
+            if self._gt is not None:
+                tree = self._gt._find_tree_byname(name)
+                if tree:
+                    return tree
+
+    def remove_point(self, point: Tuple[int, int]) -> None:
+        """ Remove information about a player at point <point> from this tree.
+
+        Runtime: O(log(n))
+        """
+        if self.is_empty():
+            return None
+        if not self.contains_point(point):
+            return None
+        if self._point == point:
+            if self.is_leaf():
+                self._name, self._point = None, None
+            else:
+                if self._lt is not None:
+                    promote = self._get_promoting_tree('max')
+                    hold_name, hold_point = \
+                        promote._name, promote._point
+                    self.remove_point(promote._point)
+                    self._name, self._point = hold_name, hold_point
+                    # self._split_type = hold_split
+                else:
+                    promote = self._get_promoting_tree('max')
+                    hold_name, hold_point = \
+                        promote._name, promote._point
+                    self._lt, self._gt = self._gt, None
+                    self.remove_point(promote._point)
+                    self._name, self._point = hold_name, hold_point
+                    # self._split_type = hold_split
+        else:
+            tree = self._get_tree_bypoint(point)
+            if tree[0].is_leaf():
+                if tree[1]._gt is tree[0]:
+                    tree[1]._gt = None
+                elif tree[1]._lt is tree[0]:
+                    tree[1]._lt = None
+            else:
+                # if tree[0]._lt is not None:
+                #     promote = tree[0]._get_promoting_tree('max')
+                #     hold_name, hold_point = promote._name, promote._point
+                #     self.remove_point(promote._point)
+                #     tree[0]._name, tree[0]._point = hold_name, hold_point
+                # else:
+                #     promote = tree[0]._get_promoting_tree('max')
+                #     hold_name, hold_point = promote._name, promote._point
+                #     self.remove_point(promote._point)
+                #     self._lt, self._gt = self._gt, None
+                #     tree[0]._name, tree[0]._point = hold_name, hold_point
+                # tree[0]._split_type = hold_split
+                if tree[0]._lt is not None:
+                    promote1 = tree[0]._get_promoting_tree('max')
+                    hold_name, hold_point = promote1._name, promote1._point
+                    self.remove_point(promote1._point)
+                    tree[0]._name, tree[0]._point = hold_name, hold_point
+                else:
+                    promote2 = tree[0]._get_promoting_tree('max')
+                    hold_name, hold_point = promote2._name, promote2._point
+                    self.remove_point(promote2._point)
+                    self._lt, self._gt = self._gt, None
+                    tree[0]._name, tree[0]._point = hold_name, hold_point
+
+    def _get_tree_bypoint(self, point: Tuple[int, int]) -> \
+            Tuple[TwoDTree, TwoDTree]:
+        if self._split_type == 'x':
+            if point[0] <= self._point[0]:
+                if self._lt._point == point:
+                    return self._lt, self
+                else:
+                    t = self._lt._get_tree_bypoint(point)
+                    if t:
+                        return t
+            elif point[0] > self._point[0]:
+                if self._gt._point == point:
+                    return self._gt, self
+                else:
+                    p = self._gt._get_tree_bypoint(point)
+                    if p:
+                        return p
+        elif self._split_type == 'y':
+            if point[1] <= self._point[1]:
+                if self._lt._point == point:
+                    return self._lt, self
+                else:
+                    t = self._lt._get_tree_bypoint(point)
+                    if t:
+                        return t
+            elif point[1] > self._point[1]:
+                if self._gt._point == point:
+                    return self._gt, self
+                else:
+                    p = self._gt._get_tree_bypoint(point)
+                    if p:
+                        return p
