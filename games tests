@@ -1,0 +1,326 @@
+##### Testing Games file #####
+from __future__ import annotations
+from typing import Optional, List, Tuple, Dict
+from trees import QuadTree
+from trees import *
+import games
+import pytest
+import random
+import players
+
+# TAG GAME
+
+def test_tag_initializer()-> None:
+    s = games.Tag(5, TwoDTree((0,0),(200,200)), 1, 1, 1)
+    assert len(s._players) == 5
+    assert s._duration == 1
+    assert s._players[s._it]._colour == 'purple'
+    for item in s._players:
+        if item != s._it:
+            assert s._players[item]._colour == 'green'
+            assert s._players[item].get_targets() == []
+            assert s._players[item].get_enemies() == [s._it]
+        assert item in s.field
+        assert 0 <= s._players[item]._speed <= 1
+
+    assert len(s._players[s._it].get_targets()) == 4
+    assert len(s._players[s._it].get_enemies()) == 0
+
+
+def test_tag_collision() -> None:
+    s = games.Tag(5, TwoDTree((0, 0), (200, 200)), 1, 1, 1)
+    p1 = s._it
+    p1_inital_dir = s._players[s._it]._direction
+    non_it = []
+    for item in s._players:
+        if item != s._it:
+            non_it.append(item)
+    p2 = non_it[0]
+    p2_inital_dir = s._players[p2]._direction
+    s.handle_collision(p1, p2)
+
+    assert s._players[p1]._direction != p1_inital_dir
+    assert s._players[p2]._direction != p2_inital_dir
+
+    assert s._players[p2].get_points() == 1
+    assert s._players[p1].get_points() == 0
+
+    assert s._players[p2].get_enemies() == []
+    assert s._players[p1].get_enemies() == [p2]
+
+    lst1 = s._players[p2].get_targets()
+    expected = {p1}
+    for item in non_it:
+        if item != p2:
+            expected.add(item)
+
+    assert expected == set(lst1)
+    assert s._players[p1].get_targets() == []
+
+def test_tag_collision_p2() -> None:
+    s = games.Tag(5, TwoDTree((0, 0), (200, 200)), 1, 1, 1)
+    p1 = s._it
+    p1_inital_dir = s._players[s._it]._direction
+    non_it = []
+    for item in s._players:
+        if item != s._it:
+            non_it.append(item)
+    p2 = non_it[0]
+    p2_inital_dir = s._players[p2]._direction
+
+    #checking if the second elif works
+    s.handle_collision(p2, p1)
+
+    assert s._players[p1]._direction != p1_inital_dir
+    assert s._players[p2]._direction != p2_inital_dir
+
+    assert s._players[p2].get_points() == 1
+    assert s._players[p1].get_points() == 0
+
+    assert s._players[p2].get_enemies() == []
+    assert s._players[p1].get_enemies() == [p2]
+
+    lst1 = s._players[p2].get_targets()
+    expected = {p1}
+    for item in non_it:
+        if item != p2:
+            expected.add(item)
+
+    assert expected == set(lst1)
+    assert s._players[p1].get_targets() == []
+
+def test_tag_collision_non_it():
+    s = games.Tag(8, TwoDTree((0, 0), (500, 500)), 1, 1, 1)
+    non_it = []
+    for item in s._players:
+        if item != s._it:
+            non_it.append(item)
+
+    p1 = non_it[0]
+    p2 = non_it[1]
+    p1_init_dir = s._players[p1]._direction
+    p2_init_dir = s._players[p2]._direction
+    s.handle_collision(p1, p2)
+
+    assert s._players[p1]._direction != p1_init_dir
+    assert s._players[p2]._direction != p2_init_dir
+
+def test_tag_winners():
+    s = games.Tag(5, QuadTree((100, 100)), 1, 1, 1)
+    non_it = []
+    for item in s._players:
+        if item != s._it:
+            non_it.append(item)
+
+    s._players[non_it[0]].increase_points(5)
+    s._players[non_it[1]].increase_points(1)
+    s._players[non_it[2]].increase_points(5)
+
+    assert s.check_for_winner() == None
+    assert non_it[0] not in s._players
+    assert non_it[1] not in s._players
+    assert non_it[2] not in s._players
+    assert len(s._players) == 2
+
+    assert non_it[0] not in s.field
+    assert non_it[1] not in s.field
+    assert non_it[2] not in s.field
+
+    assert s.check_for_winner() != s._it
+
+#ZOMBIE TAG
+def test_zombie_init():
+    s = games.ZombieTag(5, QuadTree((100,100)), 2, 1, 6)
+    assert len(s._zombies) == 1
+    assert len(s._humans) == 5
+    zombie = 'p_5'
+
+    assert s._zombies[zombie].get_enemies() == []
+    assert len(s._zombies[zombie].get_targets()) == 5
+    assert s._zombies[zombie]._colour == 'purple'
+    assert zombie in s.field
+    assert s._zombies[zombie]._speed == 1
+    assert s._zombies[zombie]._vision == 6
+    assert s._zombies[zombie].get_points() == 0
+    assert zombie not in s._humans
+
+    for item in s._humans:
+        assert s._humans[item]._colour == 'green'
+        assert item in s.field
+        assert s._humans[item]._points == 0
+        assert zombie in s._humans[item].get_enemies()
+        assert len(s._humans[item].get_enemies()) == 1
+        assert s._humans[item].get_points() == 0
+
+    assert s._duration == 2
+
+def test_zombie_collision():
+    s = games.ZombieTag(5, QuadTree((100, 100)), 2, 1, 6)
+    assert len(s._zombies) == 1
+    assert len(s._humans) == 5
+    zombie = 'p_5'
+    z_init_dir = s._zombies[zombie]._direction
+    p_1 = 'p_1'
+    p_1_init_dir = s._humans[p_1]._direction
+    s.handle_collision(p_1, zombie)
+
+    assert p_1 not in s._humans
+    assert p_1 in s._zombies
+
+    assert s._zombies[p_1]._speed == 1
+    assert len(s._zombies[p_1].get_enemies()) == 0
+    assert zombie not in s._zombies[p_1].get_targets()
+    assert p_1 not in s._zombies[p_1].get_targets()
+    assert len(s._zombies[p_1].get_targets()) == 4
+
+    assert p_1 not in s._zombies[zombie].get_targets()
+    assert s._zombies[p_1]._direction != p_1_init_dir
+    assert s._zombies[zombie]._direction != z_init_dir
+
+def test_zombie_collision_2():
+    s = games.ZombieTag(5, QuadTree((100, 100)), 2, 1, 6)
+    assert len(s._zombies) == 1
+    assert len(s._humans) == 5
+    zombie = 'p_5'
+    z_init_dir = s._zombies[zombie]._direction
+    p_1 = 'p_1'
+    p_1_init_dir = s._humans[p_1]._direction
+    s.handle_collision(zombie, p_1)
+
+    assert p_1 not in s._humans
+    assert p_1 in s._zombies
+
+    assert s._zombies[p_1]._speed == 1
+    assert len(s._zombies[p_1].get_enemies()) == 0
+    assert zombie not in s._zombies[p_1].get_targets()
+    assert p_1 not in s._zombies[p_1].get_targets()
+    assert len(s._zombies[p_1].get_targets()) == 4
+
+    assert p_1 not in s._zombies[zombie].get_targets()
+    assert s._zombies[p_1]._direction != p_1_init_dir
+    assert s._zombies[zombie]._direction != z_init_dir
+
+def test_collision_no_zombies():
+    s = games.ZombieTag(4, TwoDTree((0,0), (200,200)), 2, 1, 6)
+    human1 = 'p_0'
+    human2 = 'p_1'
+    h1_init_dir = s._humans[human1]._direction
+    h2_init_dir = s._humans[human2]._direction
+
+    s.handle_collision('p_0', 'p_1')
+
+    assert s._humans[human1]._direction != h1_init_dir
+    assert s._humans[human2]._direction != h2_init_dir
+
+def test_zombie_winner():
+    s = games.ZombieTag(4, TwoDTree((0, 0), (200, 200)), 2, 1, 6)
+    assert s.check_for_winner() == 'humans'
+
+    zombie = 'p_4'
+
+    s.handle_collision(zombie, 'p_0')
+    s.handle_collision(zombie, 'p_1')
+    s.handle_collision(zombie, 'p_2')
+    s.handle_collision(zombie, 'p_3')
+
+    assert s.check_for_winner() == 'zombies'
+
+# Eliminiation Tag
+def test_init_EliminationTag():
+    s = games.EliminationTag(5, TwoDTree((0,0), (500, 500)), 1, 1)
+    assert len(s._players) == 5
+
+    for item in s._players:
+        assert len(s._players[item].get_targets()) == 1
+        assert len(s._players[item].get_enemies()) == 1
+        assert s._players[item]._colour == 'random'
+        assert s._players[item]._direction in ["N", 'S', "E", "W"]
+        assert item in s.field
+
+    assert s._players['p_0'].get_enemies() == ['p_4']
+    assert s._players['p_0'].get_targets() == ['p_1']
+    assert s._players['p_4'].get_enemies() == ['p_3']
+    assert s._players['p_4'].get_targets() == ['p_0']
+
+def test_handle_collision_none_targets():
+    s = games.EliminationTag(5, TwoDTree((0, 0), (500, 500)), 1, 1)
+    p1 = 'p_0'
+    p1_init_dir = s._players[p1]._direction
+    p2 = 'p_3'
+    p2_init_dir = s._players[p2]._direction
+
+    s.handle_collision(p1, p2)
+    reversed_dirs = {'N': 'S', 'S': 'N', 'E': 'W', 'W': 'E'}
+    assert s._players[p1]._direction == reversed_dirs[p1_init_dir]
+    assert s._players[p2]._direction == reversed_dirs[p2_init_dir]
+
+def test_handle_collision_are_targets():
+    s = games.EliminationTag(5, TwoDTree((0, 0), (500, 500)), 1, 1)
+    p1 = 'p_0'
+    p2 = 'p_1'
+
+    s.handle_collision(p1, p2)
+
+    assert p2 not in s._players
+    assert s._players[p1].get_targets() == ['p_2']
+    assert s._players[p1].get_enemies() == ['p_4']
+    assert s._players['p_2'].get_enemies() == [p1]
+
+    assert s._players[p1].get_points() == 1
+
+def test_handle_collision_are_targets2():
+    s = games.EliminationTag(5, TwoDTree((0, 0), (500, 500)), 1, 1)
+    p1 = 'p_0'
+    p2 = 'p_4'
+
+    s.handle_collision(p2, p1)
+
+    assert p1 not in s._players
+    assert s._players[p2].get_enemies() == ['p_3']
+    assert s._players[p2].get_targets() == ['p_1']
+    assert s._players['p_1'].get_enemies() == [p2]
+    assert s._players[p2].get_points() == 1
+
+    p3 = 'p_1'
+    s.handle_collision(p3, p2)
+
+    assert p3 not in s._players
+    assert s._players[p2].get_enemies() == ['p_3']
+    assert s._players[p2].get_targets() == ['p_2']
+    assert s._players[p2].get_points() == 2
+
+def test_handle_collision_on_3_players():
+    s = games.EliminationTag(3, TwoDTree((0, 0), (500, 500)), 1, 1)
+    p0 = 'p_0'
+    p1 = 'p_1'
+
+    s.handle_collision(p0, p1)
+    assert len(s._players) == 2
+    assert s._players[p0].get_enemies() == []
+    assert p1 not in s._players
+    assert s._players[p0].get_targets() == ['p_2']
+    assert s._players['p_2'].get_targets() == []
+    assert s._players['p_2'].get_enemies() == [p0]
+    assert p1 not in s._players
+    assert s._players[p0].get_points() == 1
+    assert s._players['p_2'].get_points() == 0
+
+def test_handle_collision_on_3_players2():
+    s = games.EliminationTag(3, TwoDTree((0, 0), (500, 500)), 1, 1)
+    p1 = 'p_0'
+    p0 = 'p_1'
+
+    s.handle_collision(p0, p1)
+    assert len(s._players) == 2
+    assert s._players[p1].get_enemies() == []
+    assert p0 not in s._players
+    assert s._players[p1].get_targets() == ['p_2']
+    assert s._players['p_2'].get_targets() == []
+    assert s._players['p_2'].get_enemies() == [p1]
+    assert p0 not in s._players
+    assert s._players[p1].get_points() == 1
+    assert s._players['p_2'].get_points() == 0
+
+if __name__ == '__main__':
+    import pytest
+    pytest.main(['games_test.py'])
